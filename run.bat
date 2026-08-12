@@ -95,141 +95,14 @@ if not exist "%FFMPEG_DIR%" (
 )
 
 REM ==========================================================
-REM DOWNLOAD DO FFMPEG PELO WINGET
+REM INSTALL DO FFMPEG PELO WINGET
 REM ==========================================================
 
 echo.
 echo Baixando FFmpeg pelo winget...
 echo.
 
-winget download Gyan.FFmpeg ^
-    --accept-source-agreements ^
-    --accept-package-agreements ^
-    --silent ^
-    --download-directory "%APP_DIR%tools\ffmpeg_download"
-
-if errorlevel 1 (
-    echo.
-    echo ERRO: nao foi possivel baixar o FFmpeg pelo winget.
-    echo.
-    pause
-    exit /b 1
-)
-
-REM ==========================================================
-REM LOCALIZA O ARQUIVO BAIXADO
-REM ==========================================================
-
-echo.
-echo Procurando pacote do FFmpeg...
-
-set "FFMPEG_ARCHIVE="
-
-for /r "%APP_DIR%tools\ffmpeg_download" %%F in (*.zip) do (
-    set "FFMPEG_ARCHIVE=%%F"
-)
-
-if not defined FFMPEG_ARCHIVE (
-    echo.
-    echo ERRO: arquivo ZIP do FFmpeg nao encontrado.
-    echo.
-    pause
-    exit /b 1
-)
-
-echo Pacote encontrado:
-echo !FFMPEG_ARCHIVE!
-
-REM ==========================================================
-REM EXTRAI FFMPEG
-REM ==========================================================
-
-echo.
-echo Extraindo FFmpeg...
-
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-    "Expand-Archive -LiteralPath '!FFMPEG_ARCHIVE!' -DestinationPath '%FFMPEG_DIR%\_extract' -Force"
-
-if errorlevel 1 (
-    echo.
-    echo ERRO ao extrair o FFmpeg.
-    echo.
-    pause
-    exit /b 1
-)
-
-REM ==========================================================
-REM LOCALIZA FFMPEG.EXE DENTRO DO PACOTE
-REM ==========================================================
-
-set "FFMPEG_EXE="
-
-for /r "%FFMPEG_DIR%\_extract" %%F in (ffmpeg.exe) do (
-    set "FFMPEG_EXE=%%F"
-    goto FOUND_FFMPEG_EXE
-)
-
-:FOUND_FFMPEG_EXE
-
-if not defined FFMPEG_EXE (
-    echo.
-    echo ERRO: ffmpeg.exe nao encontrado dentro do pacote.
-    echo.
-    pause
-    exit /b 1
-)
-
-echo.
-echo FFmpeg encontrado em:
-echo !FFMPEG_EXE!
-
-REM ==========================================================
-REM COPIA ESTRUTURA BIN
-REM ==========================================================
-
-for %%F in ("!FFMPEG_EXE!") do (
-    set "FFMPEG_SOURCE_DIR=%%~dpF"
-)
-
-echo.
-echo Instalando FFmpeg localmente...
-
-if not exist "%FFMPEG_BIN%" (
-    mkdir "%FFMPEG_BIN%"
-)
-
-copy /Y "!FFMPEG_SOURCE_DIR!ffmpeg.exe" "%FFMPEG_BIN%\ffmpeg.exe" >nul
-copy /Y "!FFMPEG_SOURCE_DIR!ffprobe.exe" "%FFMPEG_BIN%\ffprobe.exe" >nul 2>nul
-copy /Y "!FFMPEG_SOURCE_DIR!ffplay.exe" "%FFMPEG_BIN%\ffplay.exe" >nul 2>nul
-
-if not exist "%FFMPEG_BIN%\ffmpeg.exe" (
-    echo.
-    echo ERRO: nao foi possivel instalar ffmpeg.exe.
-    echo.
-    pause
-    exit /b 1
-)
-
-REM ==========================================================
-REM LIMPA DOWNLOAD
-REM ==========================================================
-
-echo.
-echo Limpando arquivos temporarios...
-
-rmdir /S /Q "%APP_DIR%tools\ffmpeg_download" >nul 2>&1
-rmdir /S /Q "%FFMPEG_DIR%\_extract" >nul 2>&1
-
-REM ==========================================================
-REM ADICIONA FFMPEG AO PATH DA SESSAO
-REM ==========================================================
-
-:ADD_FFMPEG_PATH
-
-set "PATH=%FFMPEG_BIN%;%PATH%"
-
-echo.
-echo FFmpeg configurado.
+winget install ffmpeg
 
 :FFMPEG_READY
 
@@ -241,7 +114,7 @@ ffmpeg -version >nul 2>&1
 
 if errorlevel 1 (
     echo.
-    echo ERRO: FFmpeg nao pode ser executado.
+    echo ERRO: FFmpeg nao pode ser executado. Se acabou de instalar, execute o run.bat novamente.
     echo.
     pause
     exit /b 1
@@ -266,6 +139,14 @@ if not exist ".venv\Scripts\python.exe" (
         exit /b 1
     )
 )
+echo.
+echo Verificando compatibilidade do Python...
+
+for /f "tokens=2" %%V in ('.venv\Scripts\python.exe --version') do set "PYTHON_VERSION=%%V"
+
+echo Python utilizado: !PYTHON_VERSION!
+
+.venv\Scripts\python.exe -c "import sys; print('Python', sys.version)"
 
 REM ==========================================================
 REM ATUALIZA PIP
@@ -275,6 +156,23 @@ echo.
 echo Atualizando pip...
 
 .venv\Scripts\python.exe -m pip install --upgrade pip
+
+.venv\Scripts\python.exe -c "import audioop" >nul 2>&1
+
+if errorlevel 1 (
+    echo.
+    echo audioop nao encontrado.
+    echo Instalando compatibilidade para Python 3.13+...
+    
+    .venv\Scripts\python.exe -m pip install audioop-lts
+
+    if errorlevel 1 (
+        echo.
+        echo ERRO: nao foi possivel instalar audioop-lts.
+        pause
+        exit /b 1
+    )
+)
 
 REM ==========================================================
 REM INSTALA DEPENDENCIAS
