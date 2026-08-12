@@ -1,2 +1,162 @@
-# local_audio_editor
-Local audio editor
+# Audio Editor Local
+
+Editor de áudio web executado localmente com Python + Flask + FFmpeg.
+
+## Requisitos
+
+- Python 3.10+
+- FFmpeg instalado e disponível no PATH
+- Navegador moderno
+
+### Linux Mint / Ubuntu
+
+```bash
+sudo apt update
+sudo apt install ffmpeg python3 python3-venv
+```
+
+## Instalação
+
+```bash
+cd audio_editor_local
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Execução
+
+```bash
+python app.py
+```
+
+Abra:
+
+http://127.0.0.1:5000
+
+## Uso
+
+1. Informe uma pasta local contendo músicas.
+2. Clique em "Carregar biblioteca".
+3. Selecione uma música.
+4. Reproduza e selecione um trecho no waveform.
+5. Use os controles de corte, volume e fade.
+6. Exporte uma nova cópia.
+
+O arquivo original nunca é sobrescrito pelo editor.
+
+
+## Suporte a vídeo
+
+O editor também aceita arquivos de vídeo e trabalha somente sobre a faixa de áudio.
+
+Formatos reconhecidos:
+- MP4
+- MKV
+- AVI
+- MOV
+- WebM
+- MPEG/MPG
+- M4V
+
+Ao exportar um vídeo, a imagem é mantida e o áudio é processado com FFmpeg.
+
+
+## Ajustes em lote
+
+A interface permite aplicar a todas as músicas da pasta ajustes de timbre (graves, médios e agudos), intensidade dinâmica por compressão e volume. Os originais não são sobrescritos.
+
+
+## Pré-visualização em tempo real
+
+Os controles de graves, médios, agudos, intensidade e volume podem ser
+ouvidos em tempo real usando a Web Audio API do navegador. A prévia usa
+a mesma música selecionada no player e não modifica o arquivo original.
+
+O mesmo conjunto de ajustes continua disponível para processamento em lote
+pelo Python/FFmpeg.
+
+
+## Nivelamento
+A aplicação analisa LUFS, LRA e True Peak com FFmpeg/EBU R128, calcula as médias da pasta e permite usar essas médias como alvos de nivelamento.
+
+
+## Substituição segura
+
+O modo padrão de processamento é **Substituir arquivos originais**.
+O FFmpeg sempre gera primeiro um arquivo completo em uma área temporária.
+Somente após sucesso o original é substituído. Também existe a opção de
+criar novos arquivos sem alterar a coleção original.
+
+
+## Correção do processamento em pastas externas
+
+Quando o modo de substituição está ativo, os arquivos temporários agora são
+criados **na mesma pasta do arquivo original**. Isso evita falhas de `rename`
+ou `replace` causadas por arquivos temporários em outro filesystem ou
+partição, algo comum quando a aplicação roda em um diretório e a biblioteca
+de músicas está em outro disco.
+
+
+## Modo Karaoke
+
+O módulo Karaoke permite:
+- escolher Soprano, Mezzo-soprano, Contralto, Tenor, Barítono ou Baixo;
+- analisar uma música ou uma pasta;
+- estimar tom e faixa melódica;
+- calcular uma transposição recomendada de -12 a +12 semitons;
+- aplicar uma transposição individual;
+- aplicar recomendações diferentes a cada música da pasta;
+- preservar a duração/BPM da música durante a transposição.
+
+A detecção de faixa é uma estimativa baseada no conteúdo melódico do áudio.
+Ela não substitui uma análise vocal isolada do cantor, pois instrumentos e
+backing vocals podem influenciar a estimativa. A etapa seguinte poderá usar
+separação de stems para analisar especificamente a voz principal.
+
+
+## V10 — Interface por abas
+Biblioteca fixa no topo e quatro abas: Nivelamento da pasta, Ajuste em lote, Modo Karaoke e Ajuste por música. Karaoke e Ajuste por música usam duas colunas, com funcionalidades à esquerda e lista de arquivos à direita.
+
+
+## V11 — Correção da interface
+Corrigida a inicialização do JavaScript para que controles opcionais/legados que
+não estejam presentes em uma aba não interrompam toda a aplicação. Isso evita
+que um `addEventListener` sobre elemento inexistente impeça a inicialização das
+abas, biblioteca e análise de pasta.
+
+
+## V12 — Correção definitiva das abas
+
+Incluído o JavaScript do Bootstrap 5, que estava ausente na V10/V11.
+Também foi incluído um fallback simples de navegação das abas para que a
+interface continue navegável caso o CDN do Bootstrap não esteja disponível.
+
+
+## V13 — Correções de interface
+- Corrigido o erro `Cannot read properties of null (reading 'value')`.
+- O bitrate agora fica na área fixa da Biblioteca e é compartilhado pelos módulos.
+- Modo Karaoke e Ajuste por música usam 2/3 da tela para controles e 1/3 para a lista.
+
+
+## V14 — Correção do Karaoke
+Corrigido o erro `name 'VIDEO_EXT' is not defined` no processamento de
+transposição. As extensões de áudio e vídeo agora são definidas também no
+serviço de processamento, permitindo transposição de MP3 e demais formatos.
+
+
+## V15 — Aparência e identidade
+
+A V15 adiciona uma aba de Configurações dedicada à personalização visual:
+- título e subtítulo;
+- logo/emoji;
+- tema escuro, claro ou personalizado;
+- cores principais;
+- tamanho da fonte;
+- densidade da interface;
+- arredondamento dos componentes;
+- pré-visualização das alterações;
+- persistência em `config/settings.json`;
+- restauração dos valores padrão.
+
+A configuração visual é separada da lógica de processamento de áudio.

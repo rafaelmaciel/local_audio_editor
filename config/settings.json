@@ -1,0 +1,25 @@
+{
+  "identity": {
+    "title": "Ivan Sound Editor",
+    "subtitle": "Seu editor exclusivo",
+    "logo": "",
+    "logo_type": "emoji",
+    "logo_value": "🎵"
+  },
+  "appearance": {
+    "theme": "dark",
+    "primary": "#6c63ff",
+    "secondary": "#252936",
+    "background": "#111318",
+    "card": "#1b1e27",
+    "text": "#f5f7fa",
+    "muted": "#9CA3AF",
+    "accent": "#00d4ff",
+    "success": "#22C55E",
+    "danger": "#EF4444",
+    "warning": "#F59E0B",
+    "font_size": "normal",
+    "density": "normal",
+    "border_radius": 14
+  }
+}

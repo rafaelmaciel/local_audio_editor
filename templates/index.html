@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Audio Editor Local</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #111827;
+            color: #e5e7eb;
+        }
+
+        .panel {
+            background: #1f2937;
+            border: 1px solid #374151;
+        }
+
+        .library-item {
+            cursor: pointer;
+        }
+
+        .library-item:hover,
+        .library-item.active {
+            background: #374151;
+        }
+
+        #waveform {
+            background: #111827;
+            border-radius: 8px;
+            min-height: 180px;
+        }
+
+        .small-muted {
+            color: #9ca3af;
+            font-size: .85rem;
+        }
+
+        .sticky-editor {
+            position: sticky;
+            top: 1rem;
+        }
+
+        .nav-tabs .nav-link {
+            color: #9ca3af;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #111827;
+        }
+
+        .tab-pane {
+            min-height: 420px;
+        }
+
+        :root {
+            --app-primary: #6C63FF;
+            --app-secondary: #252936;
+            --app-background: #111318;
+            --app-card: #1B1E27;
+            --app-text: #F5F7FA;
+            --app-muted: #9CA3AF;
+            --app-accent: #00D4FF;
+            --app-success: #22C55E;
+            --app-danger: #EF4444;
+            --app-warning: #F59E0B;
+            --app-radius: 10px;
+        }
+
+        body {
+            background: var(--app-background) !important;
+            color: var(--app-text) !important;
+        }
+
+        .panel {
+            background: var(--app-card) !important;
+            border-radius: var(--app-radius) !important;
+        }
+
+        .app-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--app-radius);
+            background: var(--app-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            overflow: hidden;
+        }
+
+        .small-logo {
+            width: 40px;
+            height: 40px;
+            font-size: 22px;
+        }
+
+        .app-header h2,
+        .panel h5,
+        .panel h6 {
+            color: var(--app-text);
+        }
+
+        .small-muted {
+            color: var(--app-muted) !important;
+        }
+
+        .btn-primary {
+            background: var(--app-primary) !important;
+            border-color: var(--app-primary) !important;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: var(--app-radius) !important;
+        }
+
+        .theme-preview {
+            background: var(--app-background);
+            color: var(--app-text);
+            border: 1px solid var(--app-secondary);
+        }
+
+        .preview-card {
+            background: var(--app-card);
+        }
+
+        .settings-section {
+            padding: .25rem 0;
+        }
+
+        .density-compact .panel {
+            padding: .65rem !important;
+        }
+
+        .density-spacious .panel {
+            padding: 1.5rem !important;
+        }
+
+        .font-small {
+            font-size: .92rem;
+        }
+
+        .font-large {
+            font-size: 1.08rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-fluid py-3">
+        <div class="app-header d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-3">
+                <div id="appLogo" class="app-logo">🎵</div>
+                <div>
+                    <h2 id="appTitle" class="mb-0">Audio Editor Local</h2>
+                    <div id="appSubtitle" class="small-muted">Editor de músicas executado no próprio computador</div>
+                </div>
+            </div>
+            <span id="ffmpegStatus" class="badge text-bg-secondary">Verificando FFmpeg...</span>
+        </div>
+        <div id="alertArea"></div>
+
+        <div class="panel rounded p-3 mb-3">
+            <h5>Biblioteca</h5>
+            <div class="input-group"><input id="folderPath" class="form-control"
+                    placeholder="/home/usuario/Musicas"><button id="loadLibrary"
+                    class="btn btn-primary">Carregar</button></div>
+            <div class="row g-2 mt-2 align-items-end">
+                <div class="col-md-8">
+                    <div id="libraryInfo" class="small-muted"></div>
+                </div>
+                <div class="col-md-4"><label class="form-label mb-1">Bitrate</label>
+                    <select id="bitrate" class="form-select form-select-sm">
+                        <option value="128k">128 kbps</option>
+                        <option value="192k" selected>192 kbps</option>
+                        <option value="256k">256 kbps</option>
+                        <option value="320k">320 kbps</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#levelPane"
+                    type="button">Nivelamento da pasta</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#batchPane"
+                    type="button">Ajuste em lote</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#karaokePane"
+                    type="button">Modo Karaoke</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#trackPane"
+                    type="button">Ajuste por música</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settingsPane"
+                    type="button">Configurações</button></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="levelPane">
+                <div class="panel rounded p-3">
+                    <h5>Nivelamento da pasta</h5>
+                    <p class="small-muted">Analisa todos os arquivos e permite nivelar volume e intensidade.</p>
+                    <button id="analyzeFolder" class="btn btn-outline-info w-100">Analisar pasta</button>
+                    <div id="analysisResult" class="mt-3">
+                        <div class="small-muted">Nenhuma análise realizada.</div>
+                    </div>
+                    <hr>
+                    <label class="form-label">Volume alvo <span id="targetLufsValue">-14 LUFS</span></label><input
+                        id="targetLufs" type="range" class="form-range" min="-24" max="-8" step=".1" value="-14">
+                    <label class="form-label">Intensidade alvo <span id="targetLraValue">11 LU</span></label><input
+                        id="targetLra" type="range" class="form-range" min="2" max="20" step=".5" value="11">
+                    <div class="mb-3 mt-3"><label class="form-label">Destino do nivelamento</label><select
+                            id="levelMode" class="form-select">
+                            <option value="replace" selected>Substituir arquivos originais</option>
+                            <option value="new">Criar novos arquivos</option>
+                        </select></div>
+                    <button id="levelFolder" class="btn btn-success w-100" disabled>Nivelar toda a pasta</button>
+                    <div id="levelResult" class="mt-3"></div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="batchPane">
+                <div class="panel rounded p-3">
+                    <h5>Ajuste em lote</h5>
+                    <p class="small-muted">Aplica o mesmo ajuste a todas as músicas da pasta. Vídeos mantêm a imagem.
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label">Graves <span id="batchBassValue">0
+                                    dB</span></label><input id="batchBass" type="range" class="form-range" min="-12"
+                                max="12" step=".5" value="0"></div>
+                        <div class="col-md-6"><label class="form-label">Médios <span id="batchMidValue">0
+                                    dB</span></label><input id="batchMid" type="range" class="form-range" min="-12"
+                                max="12" step=".5" value="0"></div>
+                        <div class="col-md-6"><label class="form-label">Agudos <span id="batchTrebleValue">0
+                                    dB</span></label><input id="batchTreble" type="range" class="form-range" min="-12"
+                                max="12" step=".5" value="0"></div>
+                        <div class="col-md-6"><label class="form-label">Intensidade / Compressão <span
+                                    id="batchIntensityValue">0%</span></label><input id="batchIntensity" type="range"
+                                class="form-range" min="0" max="100" step="1" value="0"></div>
+                        <div class="col-md-6"><label class="form-label">Volume <span id="batchVolumeValue">0
+                                    dB</span></label><input id="batchVolume" type="range" class="form-range" min="-18"
+                                max="18" step=".5" value="0"></div>
+                        <div class="col-md-6"><label class="form-label">Formato</label><select id="batchFormat"
+                                class="form-select">
+                                <option value="mp3">MP3</option>
+                                <option value="wav">WAV</option>
+                                <option value="flac">FLAC</option>
+                                <option value="ogg">OGG</option>
+                            </select></div>
+                    </div>
+                    <div class="mb-3 mt-3"><label class="form-label">Destino</label><select id="batchMode"
+                            class="form-select">
+                            <option value="replace" selected>Substituir arquivos originais</option>
+                            <option value="new">Criar novos arquivos</option>
+                        </select></div>
+                    <button id="batchProcess" class="btn btn-success w-100">Aplicar em toda a pasta</button>
+                    <div id="batchResult" class="mt-3"></div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="karaokePane">
+                <div class="row g-3">
+                    <div class="col-lg-8">
+                        <div class="panel rounded p-3">
+                            <h5>🎤 Modo Karaoke</h5>
+                            <p class="small-muted">Analisa a faixa melódica estimada e recomenda a transposição para a
+                                voz escolhida.</p>
+                            <label class="form-label">Perfil vocal</label><select id="karaokeProfile"
+                                class="form-select">
+                                <option value="soprano">Soprano</option>
+                                <option value="mezzo">Mezzo-soprano</option>
+                                <option value="contralto">Contralto</option>
+                                <option value="tenor">Tenor</option>
+                                <option value="baritone" selected>Barítono</option>
+                                <option value="bass">Baixo</option>
+                            </select>
+                            <button id="karaokeAnalyze" class="btn btn-outline-info w-100 mt-2">Analisar música
+                                selecionada</button><button id="karaokeAnalyzeFolder"
+                                class="btn btn-outline-info w-100 mt-2">Analisar toda a pasta</button>
+                            <div id="karaokeResult" class="mt-3">
+                                <div class="small-muted">Nenhuma análise realizada.</div>
+                            </div>
+                            <label class="form-label mt-3">Transposição <span id="karaokeShiftValue">0
+                                    semitons</span></label><input id="karaokeShift" type="range" class="form-range"
+                                min="-12" max="12" step="1" value="0">
+                            <div class="d-flex gap-2 mt-2"><button id="karaokeRecommend"
+                                    class="btn btn-outline-warning flex-fill" disabled>Usar recomendação</button><button
+                                    id="karaokeApplyTrack" class="btn btn-success flex-fill" disabled>Aplicar à
+                                    música</button></div>
+                            <div class="mt-3"><label class="form-label">Destino</label><select id="karaokeMode"
+                                    class="form-select">
+                                    <option value="replace" selected>Substituir arquivo original</option>
+                                    <option value="new">Criar novo arquivo</option>
+                                </select></div>
+                            <div id="karaokeFolderResult" class="mt-3"></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="panel rounded p-3 h-100">
+                            <h5>Arquivos da pasta</h5>
+                            <div id="karaokeLibraryList" class="list-group">
+                                <div class="small-muted p-3">Carregue uma pasta para visualizar os arquivos.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="trackPane">
+                <div class="row g-3">
+                    <div class="col-lg-8">
+                        <div class="panel rounded p-3">
+                            <div id="emptyEditor" class="text-center py-4">
+                                <h4>Selecione uma música</h4>
+                                <p class="small-muted">A pré-visualização e os controles aparecerão aqui.</p>
+                            </div>
+                            <div id="editor" class="d-none">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 id="trackTitle"></h4>
+                                        <div id="trackMeta" class="small-muted"></div>
+                                    </div>
+                                </div>
+                                <audio id="audioPlayer" class="w-100 mt-3" controls></audio>
+                                <div id="waveform" class="mt-3"></div>
+                                <div class="panel rounded p-3 mt-3">
+                                    <h6>Pré-visualização em tempo real</h6>
+                                    <div id="previewStatus" class="alert alert-secondary py-2">Nenhuma música
+                                        selecionada.</div>
+                                    <div class="d-flex gap-2"><button id="previewReset"
+                                            class="btn btn-outline-light btn-sm">Restaurar prévia</button><button
+                                            id="previewEnable" class="btn btn-outline-primary btn-sm">Ativar
+                                            prévia</button></div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="panel rounded p-3">
+                            <h5>Arquivos da pasta</h5>
+                            <div id="libraryList" class="list-group"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="tab-pane fade" id="settingsPane">
+                <div class="row g-3">
+                    <div class="col-lg-8">
+                        <div class="panel rounded p-3">
+                            <h5>Aparência e identidade</h5>
+                            <p class="small-muted">Personalize a identidade visual do aplicativo. As alterações
+                                ficam salvas no computador.</p>
+
+                            <div class="settings-section">
+                                <h6>Identidade</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Título da aplicação</label>
+                                        <input id="settingsTitle" class="form-control" maxlength="80">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Subtítulo</label>
+                                        <input id="settingsSubtitle" class="form-control" maxlength="140">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Ícone / logo</label>
+                                        <select id="settingsLogoType" class="form-select">
+                                            <option value="emoji">Emoji</option>
+                                            <option value="text">Texto</option>
+                                            <option value="none">Sem logo</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Valor do logo</label>
+                                        <input id="settingsLogoValue" class="form-control" maxlength="12"
+                                            placeholder="🎵">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="settings-section">
+                                <h6>Tema</h6>
+                                <div class="mb-3">
+                                    <label class="form-label">Tema base</label>
+                                    <select id="settingsTheme" class="form-select">
+                                        <option value="dark">Escuro</option>
+                                        <option value="light">Claro</option>
+                                        <option value="custom">Personalizado</option>
+                                    </select>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-4"><label class="form-label">Cor principal</label><input
+                                            id="settingsPrimary" type="color" class="form-control form-control-color">
+                                    </div>
+                                    <div class="col-md-4"><label class="form-label">Cor secundária</label><input
+                                            id="settingsSecondary" type="color" class="form-control form-control-color">
+                                    </div>
+                                    <div class="col-md-4"><label class="form-label">Cor de destaque</label><input
+                                            id="settingsAccent" type="color" class="form-control form-control-color">
+                                    </div>
+                                    <div class="col-md-4"><label class="form-label">Fundo</label><input
+                                            id="settingsBackground" type="color"
+                                            class="form-control form-control-color"></div>
+                                    <div class="col-md-4"><label class="form-label">Cards</label><input
+                                            id="settingsCard" type="color" class="form-control form-control-color">
+                                    </div>
+                                    <div class="col-md-4"><label class="form-label">Texto</label><input
+                                            id="settingsText" type="color" class="form-control form-control-color">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="settings-section">
+                                <h6>Interface</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Tamanho da fonte</label>
+                                        <select id="settingsFontSize" class="form-select">
+                                            <option value="small">Pequena</option>
+                                            <option value="normal">Normal</option>
+                                            <option value="large">Grande</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Densidade</label>
+                                        <select id="settingsDensity" class="form-select">
+                                            <option value="compact">Compacta</option>
+                                            <option value="normal">Normal</option>
+                                            <option value="spacious">Espaçosa</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Arredondamento</label>
+                                        <input id="settingsRadius" type="range" class="form-range" min="0" max="24"
+                                            step="1">
+                                        <div class="small-muted"><span id="settingsRadiusValue">10</span> px</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2 mt-4">
+                                <button id="saveSettings" class="btn btn-primary">Salvar aparência</button>
+                                <button id="resetSettings" class="btn btn-outline-warning">Restaurar padrão</button>
+                            </div>
+                            <div id="settingsResult" class="mt-3"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="panel rounded p-3">
+                            <h5>Prévia</h5>
+                            <div id="themePreview" class="theme-preview rounded p-3">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <div id="previewLogo" class="app-logo small-logo">🎵</div>
+                                    <div><strong id="previewTitle">Audio Editor Local</strong>
+                                        <div id="previewSubtitle" class="small-muted">Minha biblioteca</div>
+                                    </div>
+                                </div>
+                                <div class="preview-card rounded p-3 mb-2">Card de exemplo</div>
+                                <button class="btn btn-primary w-100">Botão principal</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+
+</html>
