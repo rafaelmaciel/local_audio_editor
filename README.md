@@ -43,9 +43,6 @@ http://127.0.0.1:5000
 5. Use os controles de corte, volume e fade.
 6. Exporte uma nova cópia.
 
-O arquivo original nunca é sobrescrito pelo editor.
-
-
 ## Suporte a vídeo
 
 O editor também aceita arquivos de vídeo e trabalha somente sobre a faixa de áudio.
@@ -160,3 +157,5 @@ A V15 adiciona uma aba de Configurações dedicada à personalização visual:
 - restauração dos valores padrão.
 
 A configuração visual é separada da lógica de processamento de áudio.
+
+## Desenvolvido em conjunto com IA
