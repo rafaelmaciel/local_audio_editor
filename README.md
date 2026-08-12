@@ -9,28 +9,21 @@ Editor de áudio web executado localmente com Python + Flask + FFmpeg.
 - Navegador moderno
 
 ### Linux Mint / Ubuntu
+No final da execução o navegador será aberto
 
 ```bash
-sudo apt update
-sudo apt install ffmpeg python3 python3-venv
+./run.sh
 ```
 
-## Instalação
+### Windows
+No final da execução o navegador será aberto.
+Caso o bat não identifique o FFmpeg instalado, ele será instalado e o bat precisará ser executado novamente.
 
 ```bash
-cd audio_editor_local
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+run.bat
 ```
 
-## Execução
-
-```bash
-python app.py
-```
-
-Abra:
+### Acesso a aplicação
 
 http://127.0.0.1:5000
 
@@ -110,51 +103,6 @@ A detecção de faixa é uma estimativa baseada no conteúdo melódico do áudio
 Ela não substitui uma análise vocal isolada do cantor, pois instrumentos e
 backing vocals podem influenciar a estimativa. A etapa seguinte poderá usar
 separação de stems para analisar especificamente a voz principal.
-
-
-## V10 — Interface por abas
-Biblioteca fixa no topo e quatro abas: Nivelamento da pasta, Ajuste em lote, Modo Karaoke e Ajuste por música. Karaoke e Ajuste por música usam duas colunas, com funcionalidades à esquerda e lista de arquivos à direita.
-
-
-## V11 — Correção da interface
-Corrigida a inicialização do JavaScript para que controles opcionais/legados que
-não estejam presentes em uma aba não interrompam toda a aplicação. Isso evita
-que um `addEventListener` sobre elemento inexistente impeça a inicialização das
-abas, biblioteca e análise de pasta.
-
-
-## V12 — Correção definitiva das abas
-
-Incluído o JavaScript do Bootstrap 5, que estava ausente na V10/V11.
-Também foi incluído um fallback simples de navegação das abas para que a
-interface continue navegável caso o CDN do Bootstrap não esteja disponível.
-
-
-## V13 — Correções de interface
-- Corrigido o erro `Cannot read properties of null (reading 'value')`.
-- O bitrate agora fica na área fixa da Biblioteca e é compartilhado pelos módulos.
-- Modo Karaoke e Ajuste por música usam 2/3 da tela para controles e 1/3 para a lista.
-
-
-## V14 — Correção do Karaoke
-Corrigido o erro `name 'VIDEO_EXT' is not defined` no processamento de
-transposição. As extensões de áudio e vídeo agora são definidas também no
-serviço de processamento, permitindo transposição de MP3 e demais formatos.
-
-
-## V15 — Aparência e identidade
-
-A V15 adiciona uma aba de Configurações dedicada à personalização visual:
-- título e subtítulo;
-- logo/emoji;
-- tema escuro, claro ou personalizado;
-- cores principais;
-- tamanho da fonte;
-- densidade da interface;
-- arredondamento dos componentes;
-- pré-visualização das alterações;
-- persistência em `config/settings.json`;
-- restauração dos valores padrão.
 
 A configuração visual é separada da lógica de processamento de áudio.
 
