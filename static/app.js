@@ -3,6 +3,29 @@ let wave = null;
 
 const $ = (id) => document.getElementById(id);
 
+async function waitForJob(job, resultElement) {
+    const cancelId = `cancel-${job.id}`;
+    resultElement.innerHTML = `<div class="alert alert-info">Processamento iniciado. <span id="${cancelId}-text">Aguardando...</span> <button id="${cancelId}" class="btn btn-sm btn-outline-secondary ms-2">Cancelar</button></div>`;
+    $(cancelId).addEventListener("click", async () => {
+        await fetch(`/api/jobs/${job.id}/cancel`, {method: "POST"});
+        $(cancelId).disabled = true;
+        $(`${cancelId}-text`).textContent = "Cancelamento solicitado...";
+    });
+    while (true) {
+        await new Promise(resolve => setTimeout(resolve, 700));
+        const response = await fetch(`/api/jobs/${job.id}`);
+        const state = await response.json();
+        if (!response.ok) throw new Error(state.error);
+        const progress = state.total ? `${state.completed}/${state.total}` : "preparando";
+        const label = state.current_file ? ` — ${state.current_file.split(/[\\/]/).pop()}` : "";
+        const text = $(`${cancelId}-text`);
+        if (text) text.textContent = `${progress}${label}`;
+        if (state.state === "completed") return state.result;
+        if (state.state === "cancelled") throw new Error("Processamento cancelado.");
+        if (state.state === "failed") throw new Error(state.error || "O processamento falhou.");
+    }
+}
+
 function showAlert(message, type = "danger") {
     $("alertArea").innerHTML = `
         <div class="alert alert-${type} alert-dismissible">
@@ -28,7 +51,7 @@ async function checkStatus() {
     const data = await response.json();
 
     $("ffmpegStatus").textContent = data.ffmpeg
-        ? "FFmpeg OK"
+        ? `FFmpeg OK${data.rubberband ? " · alta qualidade" : ""}`
         : "FFmpeg não encontrado";
 
     $("ffmpegStatus").className = data.ffmpeg
@@ -283,6 +306,14 @@ bindBatchRange("batchTreble", "batchTrebleValue", " dB");
 bindBatchRange("batchIntensity", "batchIntensityValue", "%");
 bindBatchRange("batchVolume", "batchVolumeValue", " dB");
 
+function syncBatchOutputMode() {
+    const replacing = $("batchMode").value === "replace";
+    $("batchFormat").disabled = replacing;
+    $("batchFormatHint").textContent = replacing ? "(formato original preservado)" : "";
+}
+$("batchMode").addEventListener("change", syncBatchOutputMode);
+syncBatchOutputMode();
+
 $("batchProcess").addEventListener("click", async () => {
     const folder = $("folderPath").value.trim();
     if (!folder) {
@@ -311,8 +342,9 @@ $("batchProcess").addEventListener("click", async () => {
                 mode: $("batchMode").value
             })
         });
-        const data = await response.json();
+        let data = await response.json();
         if (!response.ok) throw new Error(data.error);
+        data = await waitForJob(data, $("batchResult"));
 
         $("batchResult").innerHTML = `
             <div class="alert alert-success">
@@ -340,6 +372,7 @@ let previewMid = null;
 let previewHigh = null;
 let previewCompressor = null;
 let previewGain = null;
+let previewLimiter = null;
 let previewEnabled = false;
 
 function setPreviewStatus(message, type = "secondary") {
@@ -389,6 +422,12 @@ function initPreviewAudio() {
     previewCompressor.release.value = 0.18;
 
     previewGain = previewAudioContext.createGain();
+    previewLimiter = previewAudioContext.createDynamicsCompressor();
+    previewLimiter.threshold.value = -1;
+    previewLimiter.knee.value = 0;
+    previewLimiter.ratio.value = 20;
+    previewLimiter.attack.value = 0.003;
+    previewLimiter.release.value = 0.04;
 
     previewSource
         .connect(previewLow)
@@ -396,6 +435,7 @@ function initPreviewAudio() {
         .connect(previewHigh)
         .connect(previewCompressor)
         .connect(previewGain)
+        .connect(previewLimiter)
         .connect(previewAudioContext.destination);
 
     previewEnabled = true;
@@ -433,7 +473,7 @@ function updatePreviewFilters() {
     const normalized = intensity / 100;
 
     previewCompressor.threshold.setTargetAtTime(
-        -18 - normalized * 10,
+        -18 - normalized * 6,
         now,
         0.015
     );
@@ -543,6 +583,60 @@ function bindLevelRange(id,label,suffix){
 bindLevelRange("targetLufs","targetLufsValue"," LUFS");
 bindLevelRange("targetLra","targetLraValue"," LU");
 
+const perceivedVolumeChoices = [
+ {label: "Mais suave", lufs: -16, api: "soft"},
+ {label: "Equilibrado", lufs: -14, api: "balanced"},
+ {label: "Mais forte", lufs: -11, api: "strong"}
+];
+const dynamicRangeChoices = [
+ {label: "Mais uniforme", lra: 7, api: "uniform"},
+ {label: "Natural", lra: 11, api: "natural"},
+ {label: "Mais contrastado", lra: 15, api: "contrasted"}
+];
+function updateFriendlyLevelLabels() {
+ const volume = perceivedVolumeChoices[Number($("perceivedVolume").value)];
+ const dynamics = dynamicRangeChoices[Number($("dynamicRange").value)];
+ $("perceivedVolumeValue").textContent = volume.label;
+ $("dynamicRangeValue").textContent = dynamics.label;
+}
+function applyFriendlyLevelChoice() {
+ const volume = perceivedVolumeChoices[Number($("perceivedVolume").value)];
+ const dynamics = dynamicRangeChoices[Number($("dynamicRange").value)];
+ $("targetLufs").value = volume.lufs;
+ $("targetLra").value = dynamics.lra;
+ $("targetLufs").dispatchEvent(new Event("input"));
+ $("targetLra").dispatchEvent(new Event("input"));
+ updateFriendlyLevelLabels();
+}
+function syncFriendlyLevelChoice() {
+ const loudness = Number($("targetLufs").value);
+ const range = Number($("targetLra").value);
+ $("perceivedVolume").value = perceivedVolumeChoices.reduce((best, item, index) =>
+  Math.abs(item.lufs - loudness) < Math.abs(perceivedVolumeChoices[best].lufs - loudness) ? index : best, 0);
+ $("dynamicRange").value = dynamicRangeChoices.reduce((best, item, index) =>
+  Math.abs(item.lra - range) < Math.abs(dynamicRangeChoices[best].lra - range) ? index : best, 0);
+ updateFriendlyLevelLabels();
+}
+$("perceivedVolume").addEventListener("input", applyFriendlyLevelChoice);
+$("dynamicRange").addEventListener("input", applyFriendlyLevelChoice);
+$("targetLufs").addEventListener("input", syncFriendlyLevelChoice);
+$("targetLra").addEventListener("input", syncFriendlyLevelChoice);
+syncFriendlyLevelChoice();
+
+function volumeDescription(lufs) {
+ if (lufs < -18) return "Bem baixo";
+ if (lufs < -15) return "Suave";
+ if (lufs < -11) return "Equilibrado";
+ if (lufs < -8) return "Alto";
+ return "Muito alto";
+}
+function dynamicsDescription(lra) {
+ if (lra < 7) return "Bem uniforme";
+ if (lra < 11) return "Uniforme";
+ if (lra < 15) return "Natural";
+ return "Bem contrastado";
+}
+
 $("analyzeFolder").addEventListener("click",async()=>{
  const folder=$("folderPath").value.trim(); if(!folder){showAlert("Informe uma pasta.");return;}
  const b=$("analyzeFolder");b.disabled=true;b.textContent="Analisando...";
@@ -553,10 +647,11 @@ $("analyzeFolder").addEventListener("click",async()=>{
   $("targetLufs").value=x.recommended.lufs;$("targetLra").value=x.recommended.lra;
   $("targetLufs").dispatchEvent(new Event("input"));$("targetLra").dispatchEvent(new Event("input"));
   $("analysisResult").innerHTML=`<div class="row g-2">
-  <div class="col-4"><div class="border rounded p-2 text-center"><div class="small-muted">Volume médio</div><strong>${x.average.lufs} LUFS</strong></div></div>
-  <div class="col-4"><div class="border rounded p-2 text-center"><div class="small-muted">Intensidade média</div><strong>${x.average.lra} LU</strong></div></div>
-  <div class="col-4"><div class="border rounded p-2 text-center"><div class="small-muted">True Peak</div><strong>${x.average.true_peak} dBTP</strong></div></div></div>
-  <div class="alert alert-secondary mt-2 mb-0 py-2">A média foi definida como alvo inicial.</div>`;
+  <div class="col-4"><div class="border rounded p-2 text-center"><div class="small-muted">Volume atual</div><strong>${volumeDescription(x.average.lufs)}</strong></div></div>
+  <div class="col-4"><div class="border rounded p-2 text-center"><div class="small-muted">Variação atual</div><strong>${dynamicsDescription(x.average.lra)}</strong></div></div>
+  <div class="col-4"><div class="border rounded p-2 text-center"><div class="small-muted">Segurança</div><strong>Protegida</strong></div></div></div>
+  <div class="alert alert-secondary mt-2 mb-0 py-2">Recomendação: volume equilibrado e variação natural.</div>
+  <details class="small-muted mt-2"><summary>Ver detalhes técnicos da análise</summary><div class="mt-1">Volume: ${x.average.lufs} LUFS · Variação: ${x.average.lra} LU · Pico: ${x.average.true_peak} dBTP</div></details>`;
   $("levelFolder").disabled=false;
  }catch(e){folderAnalysis=null;$("analysisResult").innerHTML=`<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;$("levelFolder").disabled=true;}
  finally{b.disabled=false;b.textContent="Analisar pasta";}
@@ -569,9 +664,11 @@ $("levelFolder").addEventListener("click",async()=>{
  try{
   const r=await fetch("/api/level",{method:"POST",headers:{"Content-Type":"application/json"},
    body:JSON.stringify({folder:$("folderPath").value.trim(),target_lufs:parseFloat($("targetLufs").value),
-   target_lra:parseFloat($("targetLra").value),bitrate:valueOf("bitrate"),
+   target_lra:parseFloat($("targetLra").value),volume_style:perceivedVolumeChoices[Number($("perceivedVolume").value)].api,
+   dynamics_style:dynamicRangeChoices[Number($("dynamicRange").value)].api,bitrate:valueOf("bitrate"),
                 mode: $("levelMode").value})});
-  const x=await r.json();if(!r.ok)throw new Error(x.error);
+  let x=await r.json();if(!r.ok)throw new Error(x.error);
+  x=await waitForJob(x,$("levelResult"));
   $("levelResult").innerHTML=`<div class="alert alert-success"><strong>${x.processed.length}</strong> arquivo(s) nivelado(s).${x.failed.length?`<br>${x.failed.length} com erro.`:""}<br><span class="small-muted">${escapeHtml(x.output_dir)}</span></div>`;
  }catch(e){$("levelResult").innerHTML=`<div class="alert alert-danger">${escapeHtml(e.message)}</div>`;}
  finally{b.disabled=false;b.textContent="Nivelar toda a pasta";}
@@ -777,8 +874,9 @@ async function applyKaraokeFolder(){
                 bitrate:valueOf("bitrate")
             })
         });
-        const data=await r.json();
+        let data=await r.json();
         if(!r.ok)throw new Error(data.error);
+        data=await waitForJob(data,$("karaokeFolderResult"));
 
         $("karaokeFolderResult").insertAdjacentHTML("beforeend",
             `<div class="alert alert-success mt-2">

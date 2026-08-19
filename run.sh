@@ -17,8 +17,8 @@ do
     sleep 1
 done
 
-echo "Aplicação disponível em http://127.0.0.1:5000"
+echo "Aplicação disponível em http://127.0.0.1:5001"
 
-xdg-open http://127.0.0.1:5000
+xdg-open http://127.0.0.1:5001
 
 wait $APP_PID

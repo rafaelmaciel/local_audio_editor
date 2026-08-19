@@ -5,7 +5,7 @@ import tempfile
 import uuid
 import numpy as np
 
-from .ffmpeg import check_ffmpeg
+from .ffmpeg import check_ffmpeg, probe
 
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F",
               "F#", "G", "G#", "A", "A#", "B"]
@@ -23,11 +23,11 @@ AUDIO_EXT = {".mp3",".wav",".flac",".ogg",".m4a",".aac",".wma"}
 VIDEO_EXT = {".mp4",".mkv",".avi",".mov",".webm",".mpeg",".mpg",".m4v"}
 
 
-def _decode_audio(path, seconds=120):
+def _decode_audio(path, seconds=30, start=0):
     check_ffmpeg()
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "error",
-        "-i", str(path),
+        "-ss", str(start), "-i", str(path),
         "-t", str(seconds),
         "-vn", "-ac", "1", "-ar", "22050",
         "-f", "f32le", "-"
@@ -36,6 +36,14 @@ def _decode_audio(path, seconds=120):
     if r.returncode:
         raise RuntimeError(r.stderr.decode(errors="replace")[-3000:])
     return np.frombuffer(r.stdout, dtype=np.float32), 22050
+
+
+def _decode_representative_audio(path):
+    """Sample separate parts of a song, avoiding a first-verse-only estimate."""
+    duration = float(probe(path).get("duration") or 0)
+    positions = [0] if duration <= 90 else [0, max(0, duration * .45 - 15), max(0, duration * .8 - 15)]
+    chunks = [_decode_audio(path, seconds=30, start=position)[0] for position in positions]
+    return np.concatenate(chunks), 22050, min(duration, 30 * len(chunks))
 
 
 def _estimate_f0(samples, sr):
@@ -62,7 +70,10 @@ def _estimate_f0(samples, sr):
             continue
 
         frame *= np.hanning(frame_size)
-        corr = np.correlate(frame, frame, mode="full")[frame_size-1:]
+        # FFT autocorrelation is substantially faster than the quadratic direct method.
+        size = 1 << (2 * frame_size - 1).bit_length()
+        spectrum = np.fft.rfft(frame, size)
+        corr = np.fft.irfft(spectrum * np.conj(spectrum), size)[:frame_size]
         corr[:min_lag] = 0
 
         region = corr[min_lag:max_lag + 1]
@@ -138,7 +149,7 @@ def _detect_key(pitches):
 
 
 def analyze_file(path):
-    samples,sr=_decode_audio(path)
+    samples,sr,sampled_seconds=_decode_representative_audio(path)
     pitches=_median_filter(_estimate_f0(samples,sr))
     if not pitches:
         raise RuntimeError(
@@ -158,7 +169,7 @@ def analyze_file(path):
             "high":_frequency_to_note(high),
             "median":_frequency_to_note(median)
         },
-        "sampled_seconds":round(min(len(samples)/sr,120),1),
+        "sampled_seconds":round(sampled_seconds,1),
         "confidence":round(min(100,30+len(pitches)*0.15),1)
     }
 

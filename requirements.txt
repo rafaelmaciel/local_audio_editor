@@ -3,4 +3,3 @@ pydub>=0.25.1,<1
 mutagen>=1.47,<2
 
 numpy>=1.26,<3
-audioop-lts; python_version >= "3.13"

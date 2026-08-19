@@ -9,21 +9,28 @@ Editor de áudio web executado localmente com Python + Flask + FFmpeg.
 - Navegador moderno
 
 ### Linux Mint / Ubuntu
-No final da execução o navegador será aberto
 
 ```bash
-./run.sh
+sudo apt update
+sudo apt install ffmpeg python3 python3-venv
 ```
 
-### Windows
-No final da execução o navegador será aberto.
-Caso o bat não identifique o FFmpeg instalado, ele será instalado e o bat precisará ser executado novamente.
+## Instalação
 
 ```bash
-run.bat
+cd audio_editor_local
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Acesso a aplicação
+## Execução
+
+```bash
+python app.py
+```
+
+Abra:
 
 http://127.0.0.1:5000
 
@@ -35,6 +42,9 @@ http://127.0.0.1:5000
 4. Reproduza e selecione um trecho no waveform.
 5. Use os controles de corte, volume e fade.
 6. Exporte uma nova cópia.
+
+O arquivo original nunca é sobrescrito pelo editor.
+
 
 ## Suporte a vídeo
 
@@ -87,6 +97,22 @@ ou `replace` causadas por arquivos temporários em outro filesystem ou
 partição, algo comum quando a aplicação roda em um diretório e a biblioteca
 de músicas está em outro disco.
 
+No modo **Substituir**, o contêiner e a extensão do arquivo original são
+preservados. Conversão para MP3, WAV, FLAC ou OGG é permitida somente ao criar
+novos arquivos, evitando um arquivo MP3 com extensão FLAC (ou equivalente).
+
+## Qualidade e desempenho
+
+- A edição e o processamento em lote usam filtros em streaming do FFmpeg; o
+  áudio inteiro não é carregado na memória pelo Python.
+- Ganho, equalização e compressão terminam em um limitador de -1 dBFS para
+  reduzir clipping.
+- O nivelamento usa duas passagens EBU R128 e mede novamente o arquivo final.
+- Operações de pasta são executadas em segundo plano, mostram progresso e
+  podem receber solicitação de cancelamento entre arquivos.
+- A transposição usa Rubber Band quando o filtro estiver instalado no FFmpeg;
+  caso contrário, usa automaticamente o modo rápido compatível.
+
 
 ## Modo Karaoke
 
@@ -104,6 +130,49 @@ Ela não substitui uma análise vocal isolada do cantor, pois instrumentos e
 backing vocals podem influenciar a estimativa. A etapa seguinte poderá usar
 separação de stems para analisar especificamente a voz principal.
 
-A configuração visual é separada da lógica de processamento de áudio.
 
-## Desenvolvido em conjunto com IA
+## V10 — Interface por abas
+Biblioteca fixa no topo e quatro abas: Nivelamento da pasta, Ajuste em lote, Modo Karaoke e Ajuste por música. Karaoke e Ajuste por música usam duas colunas, com funcionalidades à esquerda e lista de arquivos à direita.
+
+
+## V11 — Correção da interface
+Corrigida a inicialização do JavaScript para que controles opcionais/legados que
+não estejam presentes em uma aba não interrompam toda a aplicação. Isso evita
+que um `addEventListener` sobre elemento inexistente impeça a inicialização das
+abas, biblioteca e análise de pasta.
+
+
+## V12 — Correção definitiva das abas
+
+Incluído o JavaScript do Bootstrap 5, que estava ausente na V10/V11.
+Também foi incluído um fallback simples de navegação das abas para que a
+interface continue navegável caso o CDN do Bootstrap não esteja disponível.
+
+
+## V13 — Correções de interface
+- Corrigido o erro `Cannot read properties of null (reading 'value')`.
+- O bitrate agora fica na área fixa da Biblioteca e é compartilhado pelos módulos.
+- Modo Karaoke e Ajuste por música usam 2/3 da tela para controles e 1/3 para a lista.
+
+
+## V14 — Correção do Karaoke
+Corrigido o erro `name 'VIDEO_EXT' is not defined` no processamento de
+transposição. As extensões de áudio e vídeo agora são definidas também no
+serviço de processamento, permitindo transposição de MP3 e demais formatos.
+
+
+## V15 — Aparência e identidade
+
+A V15 adiciona uma aba de Configurações dedicada à personalização visual:
+- título e subtítulo;
+- logo/emoji;
+- tema escuro, claro ou personalizado;
+- cores principais;
+- tamanho da fonte;
+- densidade da interface;
+- arredondamento dos componentes;
+- pré-visualização das alterações;
+- persistência em `config/settings.json`;
+- restauração dos valores padrão.
+
+A configuração visual é separada da lógica de processamento de áudio.
