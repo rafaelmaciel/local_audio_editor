@@ -160,7 +160,12 @@
                     <div id="appSubtitle" class="small-muted">Editor de músicas executado no próprio computador</div>
                 </div>
             </div>
-            <span id="ffmpegStatus" class="badge text-bg-secondary">Verificando FFmpeg...</span>
+            <div class="d-flex align-items-center gap-2">
+                <span id="ffmpegStatus" class="badge text-bg-secondary">Verificando FFmpeg...</span>
+                <button id="openSettings" class="btn btn-outline-secondary btn-sm" type="button"
+                    data-bs-toggle="modal" data-bs-target="#settingsModal" aria-label="Abrir configurações"
+                    title="Configurações">⚙</button>
+            </div>
         </div>
         <div id="alertArea"></div>
 
@@ -185,20 +190,22 @@
             </div>
         </div>
 
-        <ul class="nav nav-tabs mb-3">
-            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#levelPane"
-                    type="button">Nivelamento da pasta</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#batchPane"
-                    type="button">Ajuste em lote</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#karaokePane"
-                    type="button">Modo Karaoke</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#trackPane"
-                    type="button">Ajuste por música</button></li>
-            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#settingsPane"
-                    type="button">Configurações</button></li>
+        <ul class="nav nav-tabs mb-3" data-tab-scope="main">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#folderPane"
+                    type="button">Pasta</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#musicPane"
+                    type="button">Música</button></li>
         </ul>
 
-        <div class="tab-content">
+        <div class="tab-content" data-tab-content="main">
+            <div class="tab-pane fade show active" id="folderPane">
+                <ul class="nav nav-pills mb-3" data-tab-scope="folder">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#levelPane"
+                            type="button">Nivelamento</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#batchPane"
+                            type="button">Ajuste em lote</button></li>
+                </ul>
+                <div class="tab-content" data-tab-content="folder">
             <div class="tab-pane fade show active" id="levelPane">
                 <div class="panel rounded p-3">
                     <h5>Nivelamento da pasta</h5>
@@ -279,8 +286,18 @@
                     <div id="batchResult" class="mt-3"></div>
                 </div>
             </div>
+                </div>
+            </div>
 
-            <div class="tab-pane fade" id="karaokePane">
+            <div class="tab-pane fade" id="musicPane">
+                <ul class="nav nav-pills mb-3" data-tab-scope="music">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#karaokePane"
+                            type="button">Karaoke</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#trackPane"
+                            type="button">Ajuste por música</button></li>
+                </ul>
+                <div class="tab-content" data-tab-content="music">
+            <div class="tab-pane fade show active" id="karaokePane">
                 <div class="row g-3">
                     <div class="col-lg-8">
                         <div class="panel rounded p-3">
@@ -366,9 +383,19 @@
                     </div>
                 </div>
             </div>
+                </div>
+            </div>
+        </div>
 
-
-            <div class="tab-pane fade" id="settingsPane">
+        <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalTitle" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="settingsModalTitle">Configurações</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+            <div id="settingsPane">
                 <div class="row g-3">
                     <div class="col-lg-8">
                         <div class="panel rounded p-3">
@@ -490,6 +517,9 @@
                                 <button class="btn btn-primary w-100">Botão principal</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
                     </div>
                 </div>
             </div>

@@ -899,26 +899,22 @@ async function applyKaraokeFolder(){
 // Bootstrap 5 continua sendo usado quando disponível; este código garante
 // navegação básica mesmo quando o JS do CDN não estiver acessível.
 document.addEventListener("DOMContentLoaded", () => {
-    const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
-
-    tabButtons.forEach(button => {
+    document.querySelectorAll('[data-tab-scope][data-bs-toggle="tab"]').forEach(button => {
         button.addEventListener("click", () => {
+            const nav = button.closest("[data-tab-scope]");
+            const scope = nav?.dataset.tabScope;
             const targetSelector = button.getAttribute("data-bs-target");
-            const target = targetSelector
-                ? document.querySelector(targetSelector)
-                : null;
+            const target = targetSelector ? document.querySelector(targetSelector) : null;
+            const content = scope ? document.querySelector(`[data-tab-content="${scope}"]`) : null;
+            if (!target || !content) return;
 
-            if (!target) return;
-
-            tabButtons.forEach(btn => {
-                btn.classList.remove("active");
-                btn.setAttribute("aria-selected", "false");
+            nav.querySelectorAll('[data-bs-toggle="tab"]').forEach(item => {
+                item.classList.remove("active");
+                item.setAttribute("aria-selected", "false");
             });
-
-            document.querySelectorAll(".tab-pane").forEach(pane => {
+            Array.from(content.children).filter(item => item.classList.contains("tab-pane")).forEach(pane => {
                 pane.classList.remove("show", "active");
             });
-
             button.classList.add("active");
             button.setAttribute("aria-selected", "true");
             target.classList.add("show", "active");
